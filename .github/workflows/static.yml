@@ -21,10 +21,6 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
-env:
-  # Setting an environment variable with the value of a configuration variable
-  NEXT_PUBLIC_BASE_PATH: ${{ vars.BASE_PATH }}
-
 jobs:
   deploy:
     environment:
@@ -33,25 +29,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Node.jsの準備
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Use Node.js v20
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
+      
       # インストール
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
+      
       # ビルド
-      - run: npm run build --if-present
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /hands-on-example
+          GITHUB_PAGES: true
+
+      # ビルド結果の確認
+      - name: Verify build output
+        run: |
+          if [ ! -d "out" ]; then
+            echo "Error: out directory not found after build"
+            exit 1
+          fi
+          echo "Build output verified. Contents:"
+          ls -la out | head -20
 
       # デプロイ
       - name: Setup Pages
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v5
+      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: './out/'
+          path: './out'
+          
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v3
